@@ -72,6 +72,18 @@ export class Socket {
         return valid_args;
     };
 
+    removeResponseListener = (event) => {
+
+
+        if (!this.callbacks[event]) {
+            this.log('cannot remove response_listener that does not exist', '', true);
+            return;
+        }
+
+        delete this.callbacks[event];
+
+        console.log('response_listener removed:', this.callbacks);
+    };
 
     /**
      * initializes the socket
@@ -105,7 +117,7 @@ export class Socket {
             };
 
 
-            this.socket.onmessage = ({data,}) => {
+            this.socket.onmessage = ({data}) => {
 
 
                 const parsed = tryParse(data);// returns {ok,data,error}
@@ -136,7 +148,15 @@ export class Socket {
                     this.testReceiveCallback(parsed.data);
                 }
 
-                this.callbacks[response.event].forEach(({fn,}) => fn(response.data));
+                this.callbacks[response.event].forEach(({ fn, response_listener, event}) => {
+                    fn(response.data);
+                    if(response_listener){
+                        console.log('response listener exists', this.callbacks[response.event]);
+                        this.removeResponseListener(event);
+                    }
+                });
+
+
 
             };
 
@@ -168,7 +188,7 @@ export class Socket {
 
 
     attemptReconnect = () => {
-        const time = this.auto_reconnect.every ? this.auto_reconnect.every : 2000;
+        const time = this.auto_reconnect && this.auto_reconnect.every ? this.auto_reconnect.every : 2000;
 
 
         if (this.reconnectInterval) {
@@ -306,9 +326,9 @@ export class Socket {
             return;
         }
 
-        const request_id = uniqueID();
+        const response_id = event + '_response_' + uniqueID();
 
-        let request_data = {type: 'request', ...params, request_id};
+        let request_data = {type: 'request', response_id, data: params};
 
         if (isFunction(this.testOutputCallback)) {
             this.testOutputCallback(request_data);
@@ -316,15 +336,15 @@ export class Socket {
 
         this.send(event, request_data);
 
-        let response_listener_event = event + `_${request_id}_response`;
 
-        this.on(response_listener_event, cb);
+
+        this.on(response_id, cb, true);
 
     };
 
 
 
-    on = (event, cb) => {
+    on = (event, cb, response_listener) => {
 
         if (!this.isValidOnEventArgs(event, cb)) {
             return;
@@ -341,7 +361,7 @@ export class Socket {
         }
 
 
-        let event_listener = {name, fn: cb,};
+        let event_listener = {name, fn: cb, response_listener, event};
 
         if (!this.callbacks[event]) {
 

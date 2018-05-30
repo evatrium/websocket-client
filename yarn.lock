@@ -2,9 +2,9 @@
 # yarn lockfile v1
 
 
-"@iosio/utils@^1.0.5":
-  version "1.0.5"
-  resolved "https://registry.yarnpkg.com/@iosio/utils/-/utils-1.0.5.tgz#48de739200db1b5e87d14138360ae1f5bbbaf1ec"
+"@iosio/utils@1.0.7":
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/@iosio/utils/-/utils-1.0.7.tgz#44156a9ffa4b791aeacfc9949c9da22ea85eab05"
 
 abbrev@1:
   version "1.1.1"
