@@ -5,6 +5,8 @@
   "keywords": [
     "JavaScript",
     "websocket",
+    "client",
+    "client-side-websocket-wrapper",
     "websocket-wrapper"
   ],
   "repository": {
@@ -13,7 +15,10 @@
   },
   "dependencies": {
     "@iosio/utils": "^1.0.5",
-    "babel-preset-react-app": "^3.1.1"
+    "babel-plugin-transform-object-assign": "^6.22.0"
+  },
+  "peerDependencies": {
+    "object-assign": "4.1.1"
   },
   "author": "iosio",
   "main": "lib/index.js",
@@ -26,12 +31,8 @@
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.3",
-    "babel-plugin-add-module-exports": "^0.2.1",
-    "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-plugin-transform-es2015-modules-umd": "^6.24.1",
-    "babel-plugin-transform-object-assign": "^6.22.0",
-    "babel-preset-es2015": "^6.24.1",
-    "babel-preset-stage-2": "^6.24.1",
+    "babel-preset-react-app": "^3.1.1",
     "babel-runtime": "^6.26.0",
     "cross-env": "^5.1.6",
     "rimraf": "^2.6.2"
