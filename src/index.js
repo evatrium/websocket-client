@@ -6,7 +6,9 @@ import {
     tryParse,
     isObject,
     uniqueID,
+    isShape
 } from "@iosio/utils";
+
 
 export class Socket {
 
@@ -82,7 +84,7 @@ export class Socket {
 
         delete this.callbacks[event];
 
-        console.log('response_listener removed:', this.callbacks);
+        this.log('response_listener removed. callbacks:', this.callbacks);
     };
 
     /**
@@ -127,13 +129,21 @@ export class Socket {
                     return;
                 }
 
-                if (!parsed.data.event) {
-                    this.log('data received does not have an event and or data property. instead received:', parsed, true);
-                    return;
-                }
+                let results = isShape(parsed.data, {
+                    event:{
+                        type: 'string',
+                        required: true,
+                    },
+                    data:{
+                        type: 'any',
+                    }
+                });
 
-                if (!parsed.data.data) {
-                    this.log('data.data received is false or does not exist', '', true);
+
+                if(!results.ok){
+                    this.log('data received from socket does not have valid format. instead received:', parsed.data, true);
+                    this.log(results.errors, '', true);
+                    return;
                 }
 
                 let response = parsed.data;
@@ -148,14 +158,15 @@ export class Socket {
                     this.testReceiveCallback(parsed.data);
                 }
 
-                this.callbacks[response.event].forEach(({ fn, response_listener, event}) => {
+                this.callbacks[response.event].forEach(({fn, response_listener, event}) => {
+
                     fn(response.data);
-                    if(response_listener){
-                        console.log('response listener exists', this.callbacks[response.event]);
+
+                    if (response_listener) {
+                        this.log('response listener exists. removing it...', this.callbacks[response.event]);
                         this.removeResponseListener(event);
                     }
                 });
-
 
 
             };
@@ -248,7 +259,6 @@ export class Socket {
                 data.type = 'send';
             }
 
-
             let message = {event, data,};
 
             if (isFunction(this.testOutputCallback)) {
@@ -319,6 +329,7 @@ export class Socket {
 
     request = (event, params_or_cb_if_no_params, cb_if_params) => {
 
+
         let {ok, params, cb,} = this.validateRequestArgs(event, params_or_cb_if_no_params, cb_if_params);
 
         if (!ok) {
@@ -326,22 +337,25 @@ export class Socket {
             return;
         }
 
-        const response_id = event + '_response_' + uniqueID();
+        if (this.is_open && this.isConnected()) {
+            const response_id = event + '_response_' + uniqueID();
 
-        let request_data = {type: 'request', response_id, data: params};
+            let request_data = {type: 'request', response_id, data: params};
 
-        if (isFunction(this.testOutputCallback)) {
-            this.testOutputCallback(request_data);
+            if (isFunction(this.testOutputCallback)) {
+                this.testOutputCallback(request_data);
+            }
+
+            console.log('requestttttttt')
+
+            this.send(event, request_data);
+
+            this.on(response_id, cb, true);
+
+        }else{
+            this.log('socket not open. cannot make request', '', true);
         }
-
-        this.send(event, request_data);
-
-
-
-        this.on(response_id, cb, true);
-
     };
-
 
 
     on = (event, cb, response_listener) => {
@@ -373,7 +387,6 @@ export class Socket {
         }
 
     };
-
 
 
     remove_on = (event, cb) => {

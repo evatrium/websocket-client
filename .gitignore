@@ -5,6 +5,8 @@ node_modules
 # testing
 /coverage
 
+quicky
+quicky.js
 
 # misc
 .idea
