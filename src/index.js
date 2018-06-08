@@ -12,7 +12,7 @@ import {
 
 export class Socket {
 
-    constructor({url, auto_reconnect, should_console_log = true,}) {
+    constructor({url, auto_reconnect, should_console_log = true, requestMapper}) {
         this.url = url;
         this.auto_reconnect = auto_reconnect;
 
@@ -42,6 +42,14 @@ export class Socket {
 
         this.testReceiveCallback = false;
 
+        this.requestMapper = false;
+
+        if(isFunction(requestMapper)){
+            this.requestMapper = requestMapper;
+        }else{
+            console.error('requestMapper requires a function');
+        }
+
     }
 
 
@@ -58,21 +66,7 @@ export class Socket {
         }
     };
 
-    isValidOnEventArgs = (event, cb) => {
-        let valid_args = true;
 
-        if (!isString(event)) {
-            valid_args = false;
-            this.log('Must provide a string for the event type.', '', true);
-        }
-
-        if (!isFunction(cb)) {
-            this.log('Must provide a function for a callback.', '', true);
-            valid_args = false;
-        }
-
-        return valid_args;
-    };
 
     removeResponseListener = (event) => {
 
@@ -246,11 +240,22 @@ export class Socket {
         // this.socket = false;
     };
 
-    send = (event, data) => {
+    setRequestMapper = (requestMapper) =>{
+        this.requestMapper = requestMapper;
+    };
+
+
+
+
+    send = (event, data, is_request) => {
 
         if (!isString(event)) {
             this.log('a string event name is required', '', true);
             return;
+        }
+
+        if(is_request){
+
         }
 
         if (this.is_open && this.isConnected()) {
@@ -260,6 +265,10 @@ export class Socket {
             }
 
             let message = {event, data,};
+
+            if(isFunction(this.requestMapper) && is_request){
+                message = this.requestMapper(event, data.data, data.response_id, data.type);
+            }
 
             if (isFunction(this.testOutputCallback)) {
                 this.testOutputCallback(message);
@@ -327,6 +336,8 @@ export class Socket {
         this.testReceiveCallback = cb;
     };
 
+
+
     request = (event, params_or_cb_if_no_params, cb_if_params) => {
 
 
@@ -338,6 +349,7 @@ export class Socket {
         }
 
         if (this.is_open && this.isConnected()) {
+
             const response_id = event + '_response_' + uniqueID();
 
             let request_data = {type: 'request', response_id, data: params};
@@ -348,13 +360,29 @@ export class Socket {
 
             console.log('requestttttttt')
 
-            this.send(event, request_data);
+            this.send(event, request_data, true);
 
             this.on(response_id, cb, true);
 
         }else{
             this.log('socket not open. cannot make request', '', true);
         }
+    };
+
+    isValidOnEventArgs = (event, cb) => {
+        let valid_args = true;
+
+        if (!isString(event)) {
+            valid_args = false;
+            this.log('Must provide a string for the event type.', '', true);
+        }
+
+        if (!isFunction(cb)) {
+            this.log('Must provide a function for a callback.', '', true);
+            valid_args = false;
+        }
+
+        return valid_args;
     };
 
 
