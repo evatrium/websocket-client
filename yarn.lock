@@ -2,10 +2,11 @@
 # yarn lockfile v1
 
 
-"@iosio/utils@^1.0.27":
-  version "1.0.31"
-  resolved "https://registry.yarnpkg.com/@iosio/utils/-/utils-1.0.31.tgz#872d16a064af21f36b625779d3f230a2128e8c22"
+"@iosio/utils@^1.0.41":
+  version "1.0.41"
+  resolved "https://registry.yarnpkg.com/@iosio/utils/-/utils-1.0.41.tgz#b327f7591f86eb56200d2e23257a42e99e23308e"
   dependencies:
+    dateformat "^3.0.3"
     moment "^2.22.1"
 
 abbrev@1:
@@ -981,6 +982,10 @@ cross-spawn@^5.0.1, cross-spawn@^5.1.0:
 crypto-random-string@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/crypto-random-string/-/crypto-random-string-1.0.0.tgz#a230f64f568310e1498009940790ec99545bca7e"
+
+dateformat@^3.0.3:
+  version "3.0.3"
+  resolved "https://registry.yarnpkg.com/dateformat/-/dateformat-3.0.3.tgz#a6e37499a4d9a9cf85ef5872044d62901c9889ae"
 
 debug@^2.1.2, debug@^2.2.0, debug@^2.3.3, debug@^2.6.8, debug@^2.6.9:
   version "2.6.9"

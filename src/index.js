@@ -1,14 +1,8 @@
-import {
-    isFunction,
-    isString,
-    removeItemFromObjArrById,
-    findByIdInObjArr_give_index,
-    tryParse,
-    isObject,
-    uniqueID,
-    isShape
-} from "@iosio/utils";
-
+import {isFunction, isString, isObject} from '@iosio/utils/lib/type_checks';
+import {isShape} from '@iosio/utils/lib/isShape';
+import {uniqueID} from '@iosio/utils/lib/number_generation';
+import {tryParse} from '@iosio/utils/lib/string_manipulation';
+import {removeItemFromObjArrById, findByIdInObjArr_give_index} from '@iosio/utils/lib/crud_operations';
 
 export class Socket {
 
@@ -444,5 +438,3 @@ export class Socket {
 
 
 }
-
-
