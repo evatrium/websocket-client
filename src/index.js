@@ -38,11 +38,10 @@ export class Socket {
 
         this.requestMapper = false;
 
-        if(isFunction(requestMapper)){
+        if(isFunction(requestMapper)) {
             this.requestMapper = requestMapper;
-        }else{
-            console.error('requestMapper requires a function');
         }
+
 
     }
 
