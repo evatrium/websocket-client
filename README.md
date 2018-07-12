@@ -14,48 +14,36 @@ yarn add @iosio/websocket-client
 </pre>
 
 <br/>
-
+<pre>
  //emit data from client side
- <br/>
  socket.send('event-name', {some: 'info'}) // second param is optional
- <br/>
  //socket will send to server: {type: 'send', event: 'event-name', data: {some: 'info'}}
- <br/>
- <br/>
+  //   --- use the sendMapper to shape the object in the format that you want 
  //listen to events from server
- <br/>
  socket.on('something-from-server', (data)=>{
- <br/>
     console.log(data) // {some: 'info'}
- <br/>
  })
- <br/>
  //server should send: {event: 'something-from-server', data: {some: 'info'}}
- <br/>
- <br/>
+ 
  
  socket.request('give-me-something', {optional: 'param'}, (data)=>{
- <br/>
     console.log(data) //{here: 'is-something'}
-    <br/>
  });
- <br/>
- // socket will send to server: {
- <br/>
+ 
+ // socket will send to server:
+ //
+ //     {
  //       event: 'give-me-something',
- <br/>
  //       response_id: '@response-give-me-something-(some unique id response id)',
- <br/>
  //       type: 'request',
- <br/>
  //       data: {optional: 'param'}
- <br/>
  //     }
- <br/>
+ //
+ //   --- use the requestMapper to shape the object in the format that you want
+ //
 // server should use the response_id as the event to respond with: 
-<br/>
 //      {event:'@response-give-me-something-(some unique id response id)', data: {here: 'is-something'}}
-<br/>
+</pre>
 <br/>
 
 <pre>
@@ -84,8 +72,7 @@ yarn add @iosio/websocket-client
     sendMapper: null 
     //  provide function to map > ({event, type, data}) => ({...}),
     
-  
-  
+    
     should_console_log: false
     // if true will provide helpful logs
 }
