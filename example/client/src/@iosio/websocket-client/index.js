@@ -46,7 +46,7 @@ export default class Socket {
         this._reconnectInterval = null;
         this._deliberateClose = false;
 
-        this._should_console_log = should_console_log ? should_console_log : null;
+        this._should_console_log = should_console_log ? should_console_log : false;
 
         this._WebSocket = websocket ? websocket : WebSocket;
 
