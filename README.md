@@ -15,7 +15,7 @@ yarn add @iosio/websocket-client
 
 <pre>
  
- import {Socket} from 
+ import {Socket} from '@iosio/websocket-client'
  
  /*
     defaults
