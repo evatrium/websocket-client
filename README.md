@@ -31,7 +31,7 @@ yarn add @iosio/websocket-client
  //
  //     {
  //       event: 'give-me-something',
- //       response_id: '@response-give-me-something-(some unique id response id)',
+ //       response_id: '@response-give-me-something-(some unique id)',
  //       type: 'request',
  //       data: {optional: 'param'}
  //     }
@@ -39,7 +39,7 @@ yarn add @iosio/websocket-client
  //   --- use the requestMapper to shape the object in the format that you want
  //
 // server should use the response_id as the event to respond with: 
-//      {event:'@response-give-me-something-(some unique id response id)', data: {here: 'is-something'}}
+//      {event:'@response-give-me-something-(some unique id)', data: {here: 'is-something'}}
 </pre>
 <br/>
 
