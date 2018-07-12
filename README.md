@@ -24,12 +24,9 @@ yarn add @iosio/websocket-client
     console.log(data) // {some: 'info'}
  })
  //server should send: {event: 'something-from-server', data: {some: 'info'}}
- 
- 
  socket.request('give-me-something', {optional: 'param'}, (data)=>{
     console.log(data) //{here: 'is-something'}
  });
- 
  // socket will send to server:
  //
  //     {
