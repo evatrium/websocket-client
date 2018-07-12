@@ -29,7 +29,7 @@ export default class Socket {
         }
 
         this._url = url ? url : null;
-        this._auto_reconnect = auto_reconnect ? auto_reconnect : null;
+        this._auto_reconnect = auto_reconnect ? auto_reconnect : false;
         this._websocket_options = websocket_options;
 
 

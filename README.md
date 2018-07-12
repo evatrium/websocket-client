@@ -16,26 +16,30 @@ yarn add @iosio/websocket-client
 <pre>
  
  import {Socket} from 
+ 
+ /*
+    defaults
+ */
  const socket = new Socket{
     websocket: undefined 
-    //(default) provide > WebSocket only if in testing environment. consider using mock-socket
+    // WebSocket required only if in testing environment. consider using mock-socket
     
     url: undefined,
-    //(default) ex: "ws://localhost:4000",
+    // ex: "ws://localhost:4000",
     
-    websocket_options: null,
-    // (default), protocol stuff
+    websocket_options: undefined,
+    // protocol stuff
     
     auto_reconnect: false,
-    //(default), if true defaults to every 2000 ms . customize by passing > {every: (number in milliseconds)}
+    //if true defaults to every 2000 ms . customize by passing > {every: (number in milliseconds)}
    
-    requestMapper: undefined, 
-    // (default), provide function to map > ({event, type, response_id, data}) => ({...}), 
+    requestMapper: null, 
+    // provide function to map > ({event, type, response_id, data}) => ({...}), 
    
-    sendMapper: undefined 
-    // (default), provide function to map > ({event, type, data}) => ({...}),
+    sendMapper: null 
+    //  provide function to map > ({event, type, data}) => ({...}),
   
-    should_console_log: false 
-    //(default), if true will provide helpful logs
+    should_console_log: false
+    // if true will provide helpful logs
 }
 </pre> 
