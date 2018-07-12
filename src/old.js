@@ -1,9 +1,7 @@
 import {isFunction, isString, isObject} from "@iosio/utils/lib/type_checks";
-// import {findByIdInObjArr_give_index} from "@iosio/utils/lib/crud_operations";
-import {Eventer} from '@iosio/utils/lib/eventer';
+import {findByIdInObjArr_give_index} from "@iosio/utils/lib/crud_operations";
 import {tryParse} from '@iosio/utils/lib/string_manipulation';
 import {uniqueID} from '@iosio/utils/lib/number_generation';
-
 
 export default class Socket {
 
@@ -30,7 +28,7 @@ export default class Socket {
 
         this._url = url ? url : null;
         this._auto_reconnect = auto_reconnect ? auto_reconnect : null;
-        this._websocket_options = websocket_options;
+        this._websocket_options = websocket_options ? websocket_options : null;
 
 
         this._requestMapper = null;
@@ -43,6 +41,14 @@ export default class Socket {
             this._sendMapper = sendMapper;
         }
 
+        this._callbacks_base = {
+            connect: [],
+            disconnect: [],
+            reconnecting: [],
+            error: [],
+        };
+
+        this._callbacks = {...this._callbacks_base};
         this._reconnectInterval = null;
         this._deliberateClose = false;
 
@@ -52,25 +58,14 @@ export default class Socket {
 
         this._socket = null;
 
-
-        this.CONNECT = 'connect';
-        this.DISCONNECT = 'disconnect';
-        this.RECONNECTING = 'reconnecting';
-        this.ERROR = 'error';
-
-        this._callbacks = Object.create(null);
-
-        this._eventer = Eventer(this._callbacks);
-
-
-        /* -- request mapper example
+        /* -- request mapper for project
         ({event, type, response_id, data}) => ({
             event,
             data: {type, response_id, data}
         })
          */
 
-        /* -- send mapper example
+        /* -- send mapper for project
           sendMapper: ({event, type, data}) => ({
             event,
             data: {type, data}
@@ -79,22 +74,20 @@ export default class Socket {
 
     }
 
-
     _onOpen = () => {
         this._log('socket connected');
-        this._eventer.emit(this.CONNECT);
+        this._callbacks.connect.forEach(({fn,}) => fn());
     };
 
     _onError = () => {
         this._log('socket error');
-        this._eventer.emit(this.ERROR);
+        this._callbacks.error.forEach(({fn,}) => fn());
     };
 
     _onClose = () => {
         this._log('socket closed');
-        this._eventer.emit(this.DISCONNECT);
-
-        // this._socket.onclose = this._socket.onopen = this._socket.onerror = null;
+        this._callbacks.disconnect.forEach(({fn}) => fn());
+        this._socket.onclose = this._socket.onopen = this._socket.onerror = null;
         if (this._auto_reconnect && !this._deliberateClose) {
             this._attemptReconnect();
         }
@@ -111,9 +104,9 @@ export default class Socket {
 
             if (!this._isConnected()) {
 
-                this._log('attempting to reconnect');
+                this._callbacks.reconnecting.forEach(({fn,}) => fn());
 
-                this._eventer.emit(this.RECONNECTING);
+                this._log('attempting to reconnect');
 
                 this.open();
 
@@ -142,7 +135,20 @@ export default class Socket {
     };
 
 
-    _validateReceivedMessage = (data) => {
+    _removeResponseListener = (event) => {
+
+        if (!this._callbacks[event]) {
+            this._log('cannot remove response_listener that does not exist', '', true);
+            return;
+        }
+
+        delete this._callbacks[event];
+
+        this._log('response_listener removed. callbacks:', this._callbacks);
+    };
+
+
+    _validateResponse = (data) => {
         const parsed = tryParse(data);// returns {ok,data,error}
 
         if (!parsed.ok) {
@@ -155,36 +161,37 @@ export default class Socket {
             return {ok: false}
         }
 
-        let message = parsed.data;
+        let response = parsed.data;
 
-        if (!this._callbacks[message.event]) {
-            this._log('no handler exists from this event received from socket:', message.event, true);
+        if (!this._callbacks[response.event]) {
+            this._log('no handler exists from this event received from socket:', response.event, true);
             return {ok: false}
         }
 
-        return {ok: true, message}
+        return {ok: true, response: response}
     };
 
     _onMessage = ({data}) => {
 
-        const validation = this._validateReceivedMessage(data);
+        const validation = this._validateResponse(data);
         if (!validation.ok) {
             return;
         }
 
-        const {message} = validation;
+        const {response} = validation;
 
-        this._eventer.emit(message.event, message.data);
-
-        this._isResponse(message.event) && this._eventer.destroy(message.event);
-
+        this._callbacks[response.event].forEach(({fn, response_listener, event}) => {
+            fn(response.data);
+            if (response_listener) {
+                this._log('response listener exists. removing it...', this._callbacks[response.event]);
+                this._removeResponseListener(event);
+            }
+        });
     };
 
     _isConnected = () => {
-        return this._socket ? (this._socket.readyState === this._WebSocket.OPEN) : false;
+        return this._socket ? (this._socket.readyState === WebSocket.OPEN) : false;
     };
-
-    _isResponse = (res)=> isString(res) && res.search('@response-') > -1;
 
 
     open = () => {
@@ -218,26 +225,43 @@ export default class Socket {
         }
 
         if (!isFunction(cb)) {
-            this._log('Must provide a function for a callback. Must be named function if you want to remove its listener', '', true);
+            this._log('Must provide a function for a callback.', '', true);
             valid_args = false;
         }
 
         return valid_args;
     };
 
-    on = (event, cb) => {
-        this._isValidOnEventArgs(event, cb) && this._eventer.on(event, cb);
-        // return {off: ()=>this.off(event, cb)};
-    };
+    on = (event, cb, response_listener) => {
 
-    off = (event, cb) => {
-        if(this._isValidOnEventArgs(event, cb) && cb.name){
-            this._eventer.off(event, cb);
-        }else{
-            this.log('callback function passed to .off must also be a named function (not anonymous) ');
+        if (!this._isValidOnEventArgs(event, cb)) {
+            return;
         }
 
+        //stringify the name to allow this.remove_on to find the anonymous function
+        let name = cb.toString();
+
+        let already_pushed = findByIdInObjArr_give_index(this._callbacks[event], 'name', name);
+
+        if (already_pushed !== false) {
+            // this._log('already listening to the event with this function', name, true);
+            return;
+        }
+
+        let event_listener = {name, fn: cb, response_listener, event};
+
+        if (!this._callbacks[event]) {
+
+            this._callbacks[event] = [event_listener];
+
+        } else {
+
+            this._callbacks[event].push(event_listener);
+        }
+
+
     };
+
 
     send = (event, data = {}, response_id) => {
 
@@ -303,7 +327,6 @@ export default class Socket {
             return {ok: false,};
         }
 
-
         let return_obj;
 
         if (isObject(params_or_cb_if_no_params)) {
@@ -327,7 +350,6 @@ export default class Socket {
     };
 
 
-
     request = (event, params_or_cb_if_no_params, cb_if_params) => {
 
 
@@ -338,7 +360,7 @@ export default class Socket {
             return;
         }
 
-        const response_id = '@response-' + event + '-' + uniqueID();
+        const response_id = event + '_response_' + uniqueID();
 
         this._log('requesting');
 

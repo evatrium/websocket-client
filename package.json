@@ -14,16 +14,16 @@
     "url": "git+https://github.com/iosio/websocket-client.git"
   },
   "dependencies": {
-    "@iosio/utils": "^1.0.41"
+    "@iosio/utils": "^1.0.44"
   },
   "peerDependencies": {
     "object-assign": "4.1.1"
   },
   "author": "iosio",
-  "main": "lib/index.js",
+  "main": "lib/Socket.js",
   "license": "ISC",
   "watch": {
-    "build": {
+    "copy_to_example": {
       "patterns": [
         "src"
       ],
@@ -31,26 +31,50 @@
     }
   },
   "scripts": {
+    "watch:src": "npm-watch",
     "clean:build": "./node_modules/.bin/rimraf lib",
     "babel": "cross-env BABEL_ENV=production babel src --out-dir lib",
     "build": "npm run clean:build && npm run babel",
     "quicky": "node quicky.js",
-    "watch": "npm-watch"
+    "watch": "npm-watch",
+    "test": "jest",
+    "copy_to_example": "cp -r src/ example/client/src/@iosio/websocket-client",
+    "watch:test": "jest --watchAll",
+    "coverage": "jest --coverage"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.3",
+    "babel-jest": "^23.2.0",
     "babel-plugin-transform-es2015-modules-umd": "^6.24.1",
     "babel-plugin-transform-object-assign": "^6.22.0",
     "babel-preset-react-app": "^3.1.1",
     "babel-runtime": "^6.26.0",
     "cross-env": "^5.1.6",
+    "express": "^4.16.3",
+    "jest": "^23.3.0",
+    "mock-socket": "^8.0.0",
     "npm-watch": "^0.3.0",
-    "rimraf": "^2.6.2"
+    "regenerator-runtime": "^0.12.0",
+    "rimraf": "^2.6.2",
+    "ws": "^5.2.2"
   },
   "babel": {
     "presets": [
       "react-app"
+    ]
+  },
+  "jest": {
+    "coverageDirectory": "./coverage",
+    "collectCoverageFrom": [
+      "<rootDir>src/**"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/test_client/",
+      "/example/",
+      "/lib/",
+      "/coverage/"
     ]
   }
 }
