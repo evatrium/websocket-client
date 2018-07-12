@@ -1,6 +1,6 @@
 # IOSIO WebSocket Client
 
-#### installation 
+#### Installation 
 ```sh
 npm i -S @iosio/websocket-client
 ```
@@ -8,7 +8,11 @@ or
 ```sh
 yarn add @iosio/websocket-client
 ```
+#### Usage
+
 ```js
+
+
 import {Socket} from '@iosio/websocket-client'
 
 /*
