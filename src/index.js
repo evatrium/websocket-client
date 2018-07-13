@@ -1,12 +1,17 @@
 import {isFunction, isString, isObject} from "@iosio/utils/lib/type_checks";
-// import {findByIdInObjArr_give_index} from "@iosio/utils/lib/crud_operations";
 import {Eventer} from '@iosio/utils/lib/eventer';
 import {tryParse} from '@iosio/utils/lib/string_manipulation';
 import {uniqueID} from '@iosio/utils/lib/number_generation';
 
 
+
 export default class Socket {
 
+    /**
+     * Creates an instance of Socket.
+     * @param {Object} config - the initial configuration for the module
+     * @memberof Socket
+     */
     constructor(config) {
 
         if (!config) {
@@ -45,11 +50,8 @@ export default class Socket {
 
         this._reconnectInterval = null;
         this._deliberateClose = false;
-
         this._should_console_log = should_console_log ? should_console_log : false;
-
         this._WebSocket = websocket ? websocket : WebSocket;
-
         this._socket = null;
 
 
@@ -59,37 +61,36 @@ export default class Socket {
         this.ERROR = 'error';
 
         this._callbacks = Object.create(null);
-
         this._eventer = Eventer(this._callbacks);
-
-
-        /* -- request mapper example
-        ({event, type, response_id, data}) => ({
-            event,
-            data: {type, response_id, data}
-        })
-         */
-
-        /* -- send mapper example
-          sendMapper: ({event, type, data}) => ({
-            event,
-            data: {type, data}
-        })
-         */
-
     }
 
-
+    /**
+     * Handles emmitting when the socket is successfully connected to a websocket server
+     * @memberof Socket
+     * @returns {undefined}
+     */
     _onOpen = () => {
         this._log('socket connected');
         this._eventer.emit(this.CONNECT);
     };
 
+    /**
+     * Handles emmiting when there is an error
+     * @memberof Socket
+     * @returns {undefined}
+     */
     _onError = () => {
         this._log('socket error');
         this._eventer.emit(this.ERROR);
     };
 
+    /**
+     * Handles emmiting when the socket's connection is closed.
+     * It will also handle autoconnction if the connection is not deliberately closed
+     * and auto connect is enabled
+     * @memberof Socket
+     * @returns {undefined}
+     */
     _onClose = () => {
         this._log('socket closed');
         this._eventer.emit(this.DISCONNECT);
@@ -100,6 +101,12 @@ export default class Socket {
         }
     };
 
+
+    /**
+     * Attempts to reconnect on a periodical basis
+     * @memberof Socket
+     * @returns {undefined}
+     */
     _attemptReconnect = () => {
         const time = this._auto_reconnect && this._auto_reconnect.every ? this._auto_reconnect.every : 2000;
 
@@ -108,25 +115,24 @@ export default class Socket {
         }
 
         this._reconnectInterval = setInterval(() => {
-
             if (!this._isConnected()) {
-
                 this._log('attempting to reconnect');
-
                 this._eventer.emit(this.RECONNECTING);
-
                 this.open();
-
             } else {
-
                 clearInterval(this._reconnectInterval);
             }
 
         }, time);
     };
 
+    
+    /**
+     * Will close the websocket connection deliberately1
+     * @memberof Socket
+     * @returns {undefined}
+     */
     close = () => {
-
         this._deliberateClose = true;
 
         if (this._isConnected()) {
@@ -138,10 +144,15 @@ export default class Socket {
         } else {
             this._log('socket is already closed')
         }
-
     };
 
-
+    
+    /**
+     * Checks if the received message is in the correct format
+     * @param {Object} data - the recieved data object
+     * @memberof Socket
+     * @returns {Object} - is the recieved message valid
+     */
     _validateReceivedMessage = (data) => {
         const parsed = tryParse(data);// returns {ok,data,error}
 
@@ -165,28 +176,46 @@ export default class Socket {
         return {ok: true, message}
     };
 
+    /**
+     * Handles emmiting when a message is received
+     * @param {Object} * - the message received
+     *  @property {Object} data the data received from the message
+     * @memberof Socket
+     * @returns {undefined}
+     */
     _onMessage = ({data}) => {
-
         const validation = this._validateReceivedMessage(data);
         if (!validation.ok) {
             return;
         }
 
         const {message} = validation;
-
         this._eventer.emit(message.event, message.data);
-
         this._isResponse(message.event) && this._eventer.destroy(message.event);
-
     };
 
+    /**
+     * Checks if the websocket is connected
+     * @memberof Socket
+     * @returns {Boolean} - is the socket connected
+     */
     _isConnected = () => {
         return this._socket ? (this._socket.readyState === this._WebSocket.OPEN) : false;
     };
 
-    _isResponse = (res)=> isString(res) && res.search('@response-') > -1;
+    /**
+     * Checks if the message is a response for a named callback emittion
+     * @param {*} res - the response
+     * @returns {Boolean} - is the data a response
+     */
+    _isResponse = (res) => isString(res) && res.search('@response-') > -1;
 
 
+    /**
+     * Handles opening a websocket connection to the configured destination
+     * @memberof Socket
+     * @returns {undefined}
+     */
     open = () => {
         this._deliberateClose = false;
         this._log('initializing socket');
@@ -209,48 +238,73 @@ export default class Socket {
         }
     };
 
+    /**
+     * Checks if the arguments for an event are valid
+     * @param {String} event - the name of the event
+     * @param {Function} cb  - the callback
+     * @memberof Socket
+     * @returns {Object} - are the arguments valid
+     */
     _isValidOnEventArgs = (event, cb) => {
-        let valid_args = true;
-
         if (!isString(event)) {
-            valid_args = false;
             this._log('Must provide a string for the event type.', '', true);
+            return false;
         }
 
         if (!isFunction(cb)) {
             this._log('Must provide a function for a callback. Must be named function if you want to remove its listener', '', true);
-            valid_args = false;
+            return false;
         }
 
-        return valid_args;
+        return true;
     };
 
+
+    /**
+     * Registers an event to be listened for when the websocket client recieves an event from its connected server
+     * @param {String} event - the nname of the event to listen to
+     * @param {Function} cb  - the action to take when the event is received
+     * @memberof Socket
+     * @returns {undefined}
+     */
     on = (event, cb) => {
         this._isValidOnEventArgs(event, cb) && this._eventer.on(event, cb);
-        // return {off: ()=>this.off(event, cb)};
     };
 
+    /**
+     * Unregisters an event listener
+     * @param {String} event - the event name
+     * @param {Function} cb  - the callback
+     * @memberof Socket
+     * @returns {undefined}
+     */
     off = (event, cb) => {
         if(this._isValidOnEventArgs(event, cb) && cb.name){
             this._eventer.off(event, cb);
-        }else{
+        } else{
             this.log('callback function passed to .off must also be a named function (not anonymous) ');
         }
-
     };
 
+    /**
+     * Sends a message to the connected websocket server
+     * @param {String} event - the event to send
+     * @param {Object} data  - the data to send with the event
+     * @param {String} response_id - the response id
+     * @memberof Socket
+     * @returns {undefined}
+     */
     send = (event, data = {}, response_id) => {
-
         if (!this._isConnected()) {
             return;
         }
+
         if (!isString(event)) {
             this._log('.send must provide a string for the event type.', '', true);
             return;
         }
 
         let is_request = isString(response_id);
-
         let message;
 
         if (is_request) {
@@ -276,13 +330,19 @@ export default class Socket {
             }
         }
 
-
         this._socket.send(JSON.stringify(message));
     };
 
 
+    /**
+     * Validates the params of a reques
+     * @param {String} event - the event to validate
+     * @param {Object|Function} params_or_cb_if_no_params - either the options or the callback
+     * @param {Function} cb_if_params - the callback if there are options
+     * @memberof Socket
+     * @returns {Object} - is the request valid
+     */
     _validateRequestArgs = (event, params_or_cb_if_no_params, cb_if_params) => {
-
         let ok = true;
 
         if (!isString(event)) {
@@ -294,6 +354,7 @@ export default class Socket {
             this._log('/request method: a params object or callback function is required on the second parameter', '', true);
             ok = false;
         }
+
         if (isObject(params_or_cb_if_no_params) && !isFunction(cb_if_params)) {
             this._log('/request method: a callback function is required as a third parameter if a param object is passed as the second', '', true);
             ok = false;
@@ -303,34 +364,34 @@ export default class Socket {
             return {ok: false,};
         }
 
-
-        let return_obj;
-
         if (isObject(params_or_cb_if_no_params)) {
-
-            return_obj = {
+            return {
                 ok: true,
                 params: params_or_cb_if_no_params,
                 cb: cb_if_params,
             };
 
         } else if (isFunction(params_or_cb_if_no_params)) {
-
-            return_obj = {
+            return {
                 ok: true,
                 params: {},
                 cb: params_or_cb_if_no_params,
             };
         }
 
-        return return_obj;
+        return {ok: false,};
     };
 
-
-
+    /**
+     * Creates a named request to the server, the difference between this and send, is that this function
+     * will also register an event listener for the next response based on the name of this event
+     * @param {String} event - the name of the event
+     * @param {Object|Function} params_or_cb_if_no_params - either params or a callback
+     * @param {Function} cb_if_params - params if there is a callback
+     * @memberof Socket
+     * @returns {undefined}
+     */
     request = (event, params_or_cb_if_no_params, cb_if_params) => {
-
-
         let {ok, params, cb,} = this._validateRequestArgs(event, params_or_cb_if_no_params, cb_if_params);
 
         if (!ok) {
@@ -339,19 +400,23 @@ export default class Socket {
         }
 
         const response_id = '@response-' + event + '-' + uniqueID();
-
         this._log('requesting');
-
         this.send(event, params, response_id);
-
         this.on(response_id, cb, true);
-
     };
 
 
+    /**
+     * Handles logging if logging is enabled
+     * @param {String} msg - the message to log
+     * @param {String} arg - any arguments to log with the message
+     * @param {Boolean} error - is this an error
+     * @memberof Socket
+     * @returns {undefined}
+     */
     _log = (msg, arg = "", error) => {
         if (this._should_console_log) {
-            error ? console.error('Socket.js: ' + msg, arg) : console.log('Socket.js: ' + msg, arg);
+            error ? console.error('Socket.js: ' + msg, arg) : console.info('Socket.js: ' + msg, arg);
         }
     };
 
