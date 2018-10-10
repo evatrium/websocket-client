@@ -94,27 +94,23 @@ describe('websocket should work as expected', async () => {
     });
 
 
-    it('should attempt reconnect ', async () => {
+    it('should attempt reconnect and connect successfully', async () => {
 
+        //-------- set up ----------
         socket.close();
 
         socket._should_console_log = false;
-
         socket._auto_reconnect = true;
 
         const initial_connect = () => {
             eve.emit('socket-init');
-            // console.log('init connect')
             socket.off('connect', initial_connect);
         };
 
-
         socket.on('connect', initial_connect);
-
+        //initial connection
         socket.open();
-
         await till('socket-init');
-
 
         const socketReconnecting = jest.fn();
         socket.on('reconnecting', () => {
@@ -125,15 +121,20 @@ describe('websocket should work as expected', async () => {
         socket.on('connect', ()=>{
             eve.emit('connected_')
         });
+        //-------- end set up ----------
 
+
+        //force close
         socket._socket.close();
 
+        //auto reconnect should take place
         await till('socket-reconnecting');
         await till('connected_');
 
+        //should be successfully connected
         expect(socket._isConnected()).toBe(true);
 
-        expect(socketReconnecting).toHaveBeenCalled();
+        expect(socketReconnecting).toHaveBeenCalledTimes(1);
 
     });
 

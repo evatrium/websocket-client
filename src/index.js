@@ -4,6 +4,14 @@ import {tryParse} from '@iosio/utils/lib/string_manipulation';
 import {uniqueID} from '@iosio/utils/lib/number_generation';
 
 
+/*
+    webSocket readyStates
+    0 - connecting
+    1 - open
+    2 - closing
+    3 - closed
+ */
+
 
 export default class Socket {
 
@@ -48,7 +56,7 @@ export default class Socket {
             this._sendMapper = sendMapper;
         }
 
-        this._reconnectInterval = null;
+        this._reconnectTimeout = null;
         this._deliberateClose = false;
         this._should_console_log = should_console_log ? should_console_log : false;
         this._WebSocket = websocket ? websocket : WebSocket;
@@ -62,20 +70,25 @@ export default class Socket {
 
         this._callbacks = Object.create(null);
         this._eventer = Eventer(this._callbacks);
+
+        this._reconnectionInProgress = false;
     }
 
     /**
-     * Handles emmitting when the socket is successfully connected to a websocket server
+     * Handles emitting when the socket is successfully connected to a websocket server
      * @memberof Socket
      * @returns {undefined}
      */
     _onOpen = () => {
+        if (this._reconnectTimeout) {
+            clearTimeout(this._reconnectTimeout);
+        }
         this._log('socket connected');
         this._eventer.emit(this.CONNECT);
     };
 
     /**
-     * Handles emmiting when there is an error
+     * Handles emitting when there is an error
      * @memberof Socket
      * @returns {undefined}
      */
@@ -85,20 +98,53 @@ export default class Socket {
     };
 
     /**
-     * Handles emmiting when the socket's connection is closed.
-     * It will also handle autoconnction if the connection is not deliberately closed
+     * Handles emitting when the socket's connection is closed.
+     * It will also handle auto connection if the connection is not deliberately closed
      * and auto connect is enabled
      * @memberof Socket
      * @returns {undefined}
+     *
+     *
+     * 1000 - CLOSE_NORMAL
+     * 1006 - CLOSE_ABNORMAL
+     * 1007 - unsupported payload
+     * 1011 - Server error (Internal server error while operating)
+     * 1012 - Server/service is restarting
+     * 1014 - Bad gateway
+     * ...
+     * https://github.com/Luka967/websocket-close-codes
+     *
      */
-    _onClose = () => {
-        this._log('socket closed');
+    _onClose = (e) => {
+        // 1000:	// CLOSE_NORMAL
+        this._log('socket closed. error code: ', e.code);
         this._eventer.emit(this.DISCONNECT);
-
         // this._socket.onclose = this._socket.onopen = this._socket.onerror = null;
         if (this._auto_reconnect && !this._deliberateClose) {
             this._attemptReconnect();
         }
+    };
+
+    /**
+     * Will close the websocket connection deliberately
+     * @memberof Socket
+     * @returns {undefined}
+     */
+    close = () => {
+        this._deliberateClose = true;
+        //clean up rest
+        // this._reconnectionInProgress = false;
+        if (this._reconnectTimeout) {
+            clearInterval(this._reconnectTimeout);
+        }
+        if (this._isConnected()) {
+            this._log('closing socket');
+            this._socket && this._socket.close();
+
+        } else {
+            this._log('socket is already closed')
+        }
+
     };
 
 
@@ -108,50 +154,34 @@ export default class Socket {
      * @returns {undefined}
      */
     _attemptReconnect = () => {
+
         const time = this._auto_reconnect && this._auto_reconnect.every ? this._auto_reconnect.every : 2000;
 
-        if (this._reconnectInterval) {
-            clearInterval(this._reconnectInterval);
+        if (this._reconnectTimeout) {
+            clearTimeout(this._reconnectTimeout);
         }
 
-        this._reconnectInterval = setInterval(() => {
-            if (!this._isConnected()) {
-                this._log('attempting to reconnect');
-                this._eventer.emit(this.RECONNECTING);
-                this.open();
-            } else {
-                clearInterval(this._reconnectInterval);
-            }
+        this._log(`attempting reconnect in: ${time}ms`);
+
+        this._reconnectTimeout = setTimeout(() => {
+
+            this._log('reconnecting');
+
+            this._eventer.emit(this.RECONNECTING);
+
+            !this._isConnected() && this.open();
 
         }, time);
+
+
     };
 
-    
-    /**
-     * Will close the websocket connection deliberately1
-     * @memberof Socket
-     * @returns {undefined}
-     */
-    close = () => {
-        this._deliberateClose = true;
 
-        if (this._isConnected()) {
-            this._log('closing socket');
-            this._socket.close();
-            if (this._reconnectInterval) {
-                clearInterval(this._reconnectInterval);
-            }
-        } else {
-            this._log('socket is already closed')
-        }
-    };
-
-    
     /**
      * Checks if the received message is in the correct format
-     * @param {Object} data - the recieved data object
+     * @param {Object} data - the received data object
      * @memberof Socket
-     * @returns {Object} - is the recieved message valid
+     * @returns {Object} - is the received message valid
      */
     _validateReceivedMessage = (data) => {
         const parsed = tryParse(data);// returns {ok,data,error}
@@ -177,7 +207,7 @@ export default class Socket {
     };
 
     /**
-     * Handles emmiting when a message is received
+     * Handles emitting when a message is received
      * @param {Object} * - the message received
      *  @property {Object} data the data received from the message
      * @memberof Socket
@@ -218,6 +248,9 @@ export default class Socket {
      */
     open = () => {
         this._deliberateClose = false;
+        if (this._reconnectTimeout) {
+            clearInterval(this._reconnectTimeout);
+        }
         this._log('initializing socket');
         if (!this._isConnected()) {
             try {
@@ -262,7 +295,7 @@ export default class Socket {
 
     /**
      * Registers an event to be listened for when the websocket client recieves an event from its connected server
-     * @param {String} event - the nname of the event to listen to
+     * @param {String} event - the name of the event to listen to
      * @param {Function} cb  - the action to take when the event is received
      * @memberof Socket
      * @returns {undefined}
@@ -279,9 +312,9 @@ export default class Socket {
      * @returns {undefined}
      */
     off = (event, cb) => {
-        if(this._isValidOnEventArgs(event, cb) && cb.name){
+        if (this._isValidOnEventArgs(event, cb) && cb.name) {
             this._eventer.off(event, cb);
-        } else{
+        } else {
             this.log('callback function passed to .off must also be a named function (not anonymous) ');
         }
     };
@@ -335,7 +368,7 @@ export default class Socket {
 
 
     /**
-     * Validates the params of a reques
+     * Validates the params of a request
      * @param {String} event - the event to validate
      * @param {Object|Function} params_or_cb_if_no_params - either the options or the callback
      * @param {Function} cb_if_params - the callback if there are options

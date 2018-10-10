@@ -20,21 +20,21 @@ const socket = new Socket({
 
 socket.open();
 
-socket.on('connect', () => {
-    console.log('-------connected')
-});
-
-socket.on('disconnect', () => {
-    console.log('-------disconnect')
-});
-
-socket.on('reconnecting', () => {
-    console.log('-------reconnecting')
-});
-
-socket.on('error', () => {
-    console.log('-------error')
-});
+// socket.on('connect', () => {
+//     console.log('-------connected')
+// });
+//
+// socket.on('disconnect', () => {
+//     console.log('-------disconnect')
+// });
+//
+// socket.on('reconnecting', () => {
+//     console.log('-------reconnecting')
+// });
+//
+// socket.on('error', () => {
+//     console.log('-------error')
+// });
 
 
 class App extends React.Component {

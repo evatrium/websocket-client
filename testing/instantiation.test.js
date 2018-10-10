@@ -95,7 +95,7 @@ describe('websocket-client', async () => {
                 '_websocket_options',
                 '_requestMapper',
                 '_sendMapper',
-                '_reconnectInterval',
+                '_reconnectTimeout',
                 '_deliberateClose',
                 '_should_console_log',
                 '_WebSocket',
@@ -105,7 +105,8 @@ describe('websocket-client', async () => {
                 'RECONNECTING',
                 'ERROR',
                 '_callbacks',
-                '_eventer'
+                '_eventer',
+                '_reconnectionInProgress'
             ];
 
             expect(class_methods).toEqual(
