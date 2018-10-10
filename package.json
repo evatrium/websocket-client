@@ -1,6 +1,6 @@
 {
   "name": "@iosio/websocket-client",
-  "version": "2.0.13",
+  "version": "2.1.0",
   "description": "Simple wrapper for native client-side WebSocket. Similar to socket.io. Easy to use with any backend",
   "keywords": [
     "JavaScript",
